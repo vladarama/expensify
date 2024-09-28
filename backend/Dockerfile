@@ -14,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -o expense-tracker
+RUN go build -o expense-tracker cmd/expense-tracker/main.go
 
 # Expose the application port (Railway will set the actual port via the PORT environment variable)
 EXPOSE 8080
