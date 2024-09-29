@@ -8,7 +8,6 @@ type Income struct {
     Amount     float64   `json:"amount"`
     Date       time.Time `json:"date"`
     Source     string    `json:"source"`
-    Note       string    `json:"note"`
 }
 
 // TODO: Add methods for CRUD operations on incomes

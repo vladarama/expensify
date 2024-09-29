@@ -1,1 +1,3 @@
 *.env
+/expense-tracker
+!/expense-tracker/
