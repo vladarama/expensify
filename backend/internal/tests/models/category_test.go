@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"errors"
 	"testing"
 
 	"expense-tracker/internal/models"
@@ -20,7 +21,7 @@ func TestGetCategories(t *testing.T) {
 		AddRow(1, "Food", "Food expenses").
 		AddRow(2, "Transport", "Transportation expenses")
 
-	mock.ExpectQuery("SELECT id, name, description FROM categories").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, name, description FROM Category").WillReturnRows(rows)
 
 	categories, err := models.GetCategories(db)
 
@@ -44,7 +45,7 @@ func TestGetCategoryByName(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "name", "description"}).
 		AddRow(1, "Food", "Food expenses")
 
-	mock.ExpectQuery("SELECT id, name, description FROM categories WHERE name = \\$1").
+	mock.ExpectQuery("SELECT id, name, description FROM Category WHERE name = \\$1").
 		WithArgs("food").
 		WillReturnRows(rows)
 
@@ -63,7 +64,7 @@ func TestCreateCategory(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectQuery("INSERT INTO categories \\(name, description\\) VALUES \\(\\$1, \\$2\\) RETURNING id").
+	mock.ExpectQuery("INSERT INTO Category \\(name, description\\) VALUES \\(\\$1, \\$2\\) RETURNING id").
 		WithArgs("entertainment", "entertainment expenses").
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
@@ -76,6 +77,20 @@ func TestCreateCategory(t *testing.T) {
 	assert.Equal(t, "Entertainment expenses", createdCategory.Description)
 }
 
+func TestCreateCategoryWithEmptyName(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	category := models.Category{Name: "", Description: "Empty category"}
+	_, err = models.CreateCategory(db, category)
+
+	assert.Error(t, err)
+	assert.Equal(t, errors.New("category name cannot be empty"), err)
+}
+
 func TestUpdateCategory(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -83,7 +98,7 @@ func TestUpdateCategory(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectExec("UPDATE categories SET description = \\$1 WHERE name = \\$2").
+	mock.ExpectExec("UPDATE Category SET description = \\$1 WHERE name = \\$2").
 		WithArgs("updated food expenses", "food").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -95,6 +110,20 @@ func TestUpdateCategory(t *testing.T) {
 	assert.Equal(t, "Updated food expenses", updatedCategory.Description)
 }
 
+func TestUpdateCategoryWithEmptyName(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	category := models.Category{Name: "", Description: "Updated empty category"}
+	_, err = models.UpdateCategory(db, category)
+
+	assert.Error(t, err)
+	assert.Equal(t, errors.New("category name cannot be empty"), err)
+}
+
 func TestDeleteCategory(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -102,7 +131,7 @@ func TestDeleteCategory(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectExec("DELETE FROM categories WHERE name = \\$1").
+	mock.ExpectExec("DELETE FROM Category WHERE name = \\$1").
 		WithArgs("food").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 

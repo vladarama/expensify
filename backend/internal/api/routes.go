@@ -22,6 +22,13 @@ func NewRouter(db *sql.DB) http.Handler {
 	mux.HandleFunc("PUT /incomes/{id}", updateIncomeHandler(db))
 	mux.HandleFunc("DELETE /incomes/{id}", deleteIncomeHandler(db))
 
+	// Expense routes
+	mux.HandleFunc("GET /expenses", getExpensesHandler(db))
+	mux.HandleFunc("GET /expenses/{id}", getExpenseByIDHandler(db))
+	mux.HandleFunc("POST /expenses", createExpenseHandler(db))
+	mux.HandleFunc("PUT /expenses/{id}", updateExpenseHandler(db))
+	mux.HandleFunc("DELETE /expenses/{id}", deleteExpenseHandler(db))
+
 	return mux
 }
 

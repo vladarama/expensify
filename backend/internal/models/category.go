@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 	"strings"
 )
 
@@ -11,9 +12,8 @@ type Category struct {
 	Description string `json:"description"`
 }
 
-
 func GetCategories(db *sql.DB) ([]Category, error) {
-	rows, err := db.Query("SELECT id, name, description FROM categories")
+	rows, err := db.Query("SELECT id, name, description FROM Category")
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 
 func GetCategoryByName(db *sql.DB, name string) (Category, error) {
 	var category Category
-	err := db.QueryRow("SELECT id, name, description FROM categories WHERE name = $1", strings.ToLower(name)).Scan(&category.ID, &category.Name, &category.Description)
+	err := db.QueryRow("SELECT id, name, description FROM Category WHERE name = $1", strings.ToLower(name)).Scan(&category.ID, &category.Name, &category.Description)
 	if err != nil {
 		return Category{}, err
 	}
@@ -42,9 +42,13 @@ func GetCategoryByName(db *sql.DB, name string) (Category, error) {
 }
 
 func CreateCategory(db *sql.DB, category Category) (Category, error) {
+	if strings.TrimSpace(category.Name) == "" {
+		return Category{}, errors.New("category name cannot be empty")
+	}
+
 	var id int64
-	err := db.QueryRow("INSERT INTO categories (name, description) VALUES ($1, $2) RETURNING id", 
-		strings.ToLower(category.Name), strings.ToLower(category.Description)).Scan(&id)
+	err := db.QueryRow("INSERT INTO Category (name, description) VALUES ($1, $2) RETURNING id", 
+		strings.ToLower(strings.TrimSpace(category.Name)), strings.ToLower(category.Description)).Scan(&id)
 	if err != nil {
 		return Category{}, err
 	}
@@ -53,8 +57,12 @@ func CreateCategory(db *sql.DB, category Category) (Category, error) {
 }
 
 func UpdateCategory(db *sql.DB, category Category) (Category, error) {
-	_, err := db.Exec("UPDATE categories SET description = $1 WHERE name = $2", 
-		strings.ToLower(category.Description), strings.ToLower(category.Name))
+	if strings.TrimSpace(category.Name) == "" {
+		return Category{}, errors.New("category name cannot be empty")
+	}
+
+	_, err := db.Exec("UPDATE Category SET description = $1 WHERE name = $2", 
+		strings.ToLower(category.Description), strings.ToLower(strings.TrimSpace(category.Name)))
 	if err != nil {
 		return Category{}, err
 	}
@@ -62,7 +70,7 @@ func UpdateCategory(db *sql.DB, category Category) (Category, error) {
 }
 
 func DeleteCategory(db *sql.DB, name string) error {
-	_, err := db.Exec("DELETE FROM categories WHERE name = $1", strings.ToLower(name))
+	_, err := db.Exec("DELETE FROM Category WHERE name = $1", strings.ToLower(name))
 	if err != nil {
 		return err
 	}
