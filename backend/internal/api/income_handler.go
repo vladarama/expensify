@@ -57,7 +57,7 @@ func createIncomeHandler(db *sql.DB) http.HandlerFunc {
 
 		createdIncome, err := models.CreateIncome(db, income)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
