@@ -1,8 +1,23 @@
+import { Routes, Route } from "react-router-dom";
+import { Navbar } from "./components/navbar";
+import { Dashboard } from "./pages/dashboard";
+import { Income } from "./pages/income";
+import { Expenses } from "./pages/expenses";
+import { Categories } from "./pages/categories";
+
 function App() {
   return (
-    <>
-      <div className="text-4xl font-bold">Hello World</div>
-    </>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="container mx-auto px-4 py-8">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/income" element={<Income />} />
+          <Route path="/expenses" element={<Expenses />} />
+          <Route path="/categories" element={<Categories />} />
+        </Routes>
+      </div>
+    </div>
   );
 }
 

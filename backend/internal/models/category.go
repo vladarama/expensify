@@ -3,7 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"strings"
+	"fmt"
 )
 
 type Category struct {
@@ -28,13 +28,13 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 		}
 		categories = append(categories, category)
 	}
-
 	return categories, nil
 }
 
-func GetCategoryByName(db *sql.DB, name string) (Category, error) {
+func GetCategoryByID(db *sql.DB, id int64) (Category, error) {
 	var category Category
-	err := db.QueryRow("SELECT id, name, description FROM Category WHERE name = $1", strings.ToLower(name)).Scan(&category.ID, &category.Name, &category.Description)
+	err := db.QueryRow("SELECT id, name, description FROM Category WHERE id = $1", id).
+		Scan(&category.ID, &category.Name, &category.Description)
 	if err != nil {
 		return Category{}, err
 	}
@@ -42,37 +42,49 @@ func GetCategoryByName(db *sql.DB, name string) (Category, error) {
 }
 
 func CreateCategory(db *sql.DB, category Category) (Category, error) {
-	if strings.TrimSpace(category.Name) == "" {
-		return Category{}, errors.New("category name cannot be empty")
+	if category.Name == "" {
+		return Category{}, errors.New("name must be provided")
 	}
 
-	var id int64
-	err := db.QueryRow("INSERT INTO Category (name, description) VALUES ($1, $2) RETURNING id", 
-		strings.ToLower(strings.TrimSpace(category.Name)), strings.ToLower(category.Description)).Scan(&id)
+	err := db.QueryRow(
+		"INSERT INTO Category (name, description) VALUES ($1, $2) RETURNING id",
+		category.Name, category.Description,
+	).Scan(&category.ID)
 	if err != nil {
 		return Category{}, err
 	}
-	category.ID = id
 	return category, nil
 }
 
 func UpdateCategory(db *sql.DB, category Category) (Category, error) {
-	if strings.TrimSpace(category.Name) == "" {
-		return Category{}, errors.New("category name cannot be empty")
+	if category.ID == 0 {
+		return Category{}, errors.New("id must be provided")
 	}
 
-	_, err := db.Exec("UPDATE Category SET description = $1 WHERE name = $2", 
-		strings.ToLower(category.Description), strings.ToLower(strings.TrimSpace(category.Name)))
+	_, err := db.Exec(
+		"UPDATE Category SET name = $1, description = $2 WHERE id = $3",
+		category.Name, category.Description, category.ID,
+	)
 	if err != nil {
 		return Category{}, err
 	}
 	return category, nil
 }
 
-func DeleteCategory(db *sql.DB, name string) error {
-	_, err := db.Exec("DELETE FROM Category WHERE name = $1", strings.ToLower(name))
+func DeleteCategory(db *sql.DB, id int64) error {
+	result, err := db.Exec("DELETE FROM Category WHERE id = $1", id)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to execute delete query: %w", err)
 	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
 	return nil
 }

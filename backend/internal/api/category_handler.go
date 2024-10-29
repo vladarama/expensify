@@ -1,12 +1,11 @@
 package api
 
 import (
-	"encoding/json"
-	"net/http"
-
-	"expense-tracker/internal/models"
-
 	"database/sql"
+	"encoding/json"
+	"expense-tracker/internal/models"
+	"net/http"
+	"strconv"
 )
 
 func getCategoriesHandler(db *sql.DB) http.HandlerFunc {
@@ -22,10 +21,16 @@ func getCategoriesHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func getCategoryByNameHandler(db *sql.DB) http.HandlerFunc {
+func getCategoryByIDHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		name := r.PathValue("name")
-		category, err := models.GetCategoryByName(db, name)
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid category ID", http.StatusBadRequest)
+			return
+		}
+
+		category, err := models.GetCategoryByID(db, id)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				http.Error(w, "Category not found", http.StatusNotFound)
@@ -43,15 +48,14 @@ func getCategoryByNameHandler(db *sql.DB) http.HandlerFunc {
 func createCategoryHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var category models.Category
-		err := json.NewDecoder(r.Body).Decode(&category)
-		if err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		createdCategory, err := models.CreateCategory(db, category)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -60,17 +64,22 @@ func createCategoryHandler(db *sql.DB) http.HandlerFunc {
 		json.NewEncoder(w).Encode(createdCategory)
 	}
 }
+
 func updateCategoryHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		name := r.PathValue("name")
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid category ID", http.StatusBadRequest)
+			return
+		}
 
 		var category models.Category
-		err := json.NewDecoder(r.Body).Decode(&category)
-		if err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		category.Name = name
+		category.ID = id
 
 		updatedCategory, err := models.UpdateCategory(db, category)
 		if err != nil {
@@ -85,10 +94,18 @@ func updateCategoryHandler(db *sql.DB) http.HandlerFunc {
 
 func deleteCategoryHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		name := r.PathValue("name")
-
-		err := models.DeleteCategory(db, name)
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
+			http.Error(w, "Invalid category ID", http.StatusBadRequest)
+			return
+		}
+
+		if err := models.DeleteCategory(db, id); err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, "Category not found", http.StatusNotFound)
+				return
+			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

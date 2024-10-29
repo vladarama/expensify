@@ -16,16 +16,17 @@ func TestGetExpenses(t *testing.T) {
 	}
 	defer db.Close()
 
-	rows := sqlmock.NewRows([]string{"id", "category_id", "amount", "date"}).
-		AddRow(1, 1, 100.00, time.Now()).
-		AddRow(2, 2, 50.00, time.Now())
+	rows := sqlmock.NewRows([]string{"id", "name", "category_id", "amount", "date"}).
+		AddRow(1, "Groceries", 1, 100.00, time.Now()).
+		AddRow(2, "Utilities", 2, 50.00, time.Now())
 
-	mock.ExpectQuery("SELECT id, category_id, amount, date FROM Expense").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, name, category_id, amount, date FROM Expense").WillReturnRows(rows)
 
 	expenses, err := models.GetExpenses(db)
 
 	assert.NoError(t, err)
 	assert.Len(t, expenses, 2)
+	assert.Equal(t, "Groceries", expenses[0].Name)
 	assert.Equal(t, int64(1), expenses[0].ID)
 	assert.Equal(t, int64(1), expenses[0].CategoryID)
 	assert.Equal(t, 100.00, expenses[0].Amount)
@@ -61,13 +62,14 @@ func TestCreateExpense(t *testing.T) {
 	defer db.Close()
 
 	expense := models.Expense{
-		CategoryID:  1,
-		Amount:      100.00,
-		Date:        time.Now(),
+		Name:       "Groceries",
+		CategoryID: 1,
+		Amount:     100.00,
+		Date:       time.Now(),
 	}
 
-	mock.ExpectQuery("INSERT INTO Expense \\(category_id, amount, date\\) VALUES \\(\\$1, \\$2, \\$3\\) RETURNING id").
-		WithArgs(expense.CategoryID, expense.Amount, expense.Date).
+	mock.ExpectQuery("INSERT INTO Expense \\(name, category_id, amount, date\\) VALUES \\(\\$1, \\$2, \\$3, \\$4\\) RETURNING id").
+		WithArgs(expense.Name, expense.CategoryID, expense.Amount, expense.Date).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 	createdExpense, err := models.CreateExpense(db, expense)

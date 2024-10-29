@@ -10,13 +10,14 @@ import (
 
 type Expense struct {
 	ID         int64     `json:"id"`
+	Name       string    `json:"name"`
 	CategoryID int64     `json:"category_id"`
 	Amount     float64   `json:"amount"`
 	Date       time.Time `json:"date"`
 }
 
 func GetExpenses(db *sql.DB) ([]Expense, error) {
-	rows, err := db.Query("SELECT id, category_id, amount, date FROM Expense")
+	rows, err := db.Query("SELECT id, name, category_id, amount, date FROM Expense")
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +26,7 @@ func GetExpenses(db *sql.DB) ([]Expense, error) {
 	var expenses []Expense
 	for rows.Next() {
 		var expense Expense
-		err := rows.Scan(&expense.ID, &expense.CategoryID, &expense.Amount, &expense.Date)
+		err := rows.Scan(&expense.ID, &expense.Name, &expense.CategoryID, &expense.Amount, &expense.Date)
 		if err != nil {
 			return nil, err
 		}
@@ -37,8 +38,8 @@ func GetExpenses(db *sql.DB) ([]Expense, error) {
 
 func GetExpenseByID(db *sql.DB, id int64) (Expense, error) {
 	var expense Expense
-	err := db.QueryRow("SELECT id, category_id, amount, date FROM Expense WHERE id = $1", id).
-		Scan(&expense.ID, &expense.CategoryID, &expense.Amount, &expense.Date)
+	err := db.QueryRow("SELECT id, name, category_id, amount, date FROM Expense WHERE id = $1", id).
+		Scan(&expense.ID, &expense.Name, &expense.CategoryID, &expense.Amount, &expense.Date)
 	if err != nil {
 		return Expense{}, err
 	}
@@ -46,6 +47,10 @@ func GetExpenseByID(db *sql.DB, id int64) (Expense, error) {
 }
 
 func CreateExpense(db *sql.DB, expense Expense) (Expense, error) {
+	if strings.TrimSpace(expense.Name) == "" {
+		return Expense{}, errors.New("name must be provided")
+	}
+
 	if expense.Amount <= 0 {
 		return Expense{}, errors.New("amount must be greater than zero")
 	}
@@ -61,8 +66,8 @@ func CreateExpense(db *sql.DB, expense Expense) (Expense, error) {
 		return Expense{}, errors.New("category ID must be provided")
 	}
 
-	err := db.QueryRow("INSERT INTO Expense (category_id, amount, date) VALUES ($1, $2, $3) RETURNING id",
-		expense.CategoryID, expense.Amount, expense.Date).Scan(&expense.ID)
+	err := db.QueryRow("INSERT INTO Expense (name, category_id, amount, date) VALUES ($1, $2, $3, $4) RETURNING id",
+		expense.Name, expense.CategoryID, expense.Amount, expense.Date).Scan(&expense.ID)
 	if err != nil {
 		return Expense{}, err
 	}
@@ -101,6 +106,14 @@ func UpdateExpense(db *sql.DB, expense Expense) (Expense, error) {
 		argCount++
 	} else {
 		expense.Date = currentExpense.Date
+	}
+
+	if expense.Name != "" {
+		query += fmt.Sprintf(" name = $%d,", argCount)
+		args = append(args, expense.Name)
+		argCount++
+	} else {
+		expense.Name = currentExpense.Name
 	}
 
 	query = strings.TrimSuffix(query, ",")
