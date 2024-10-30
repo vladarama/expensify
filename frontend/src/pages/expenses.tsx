@@ -517,8 +517,8 @@ export function Expenses() {
           </table>
         </div>
 
-        {/* Chart Section */}
-        <div className="h-full">
+        {/* Charts Section */}
+        <div>
           <MonthlyExpenseChart expenses={expenses} />
         </div>
       </div>

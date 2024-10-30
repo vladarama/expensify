@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Category } from "../types/category";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, Pencil } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { CategoryExpenseChart } from "@/components/charts/category-expense-chart";
+import { Expense } from "@/types/expense";
 
 export function CategoriesPage() {
   return (
@@ -31,6 +33,15 @@ export function Categories() {
   });
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+
+  const getCategoryName = useCallback(
+    (categoryId: number) => {
+      const category = categories.find((cat) => cat.id === categoryId);
+      return category?.name || "Unknown Category";
+    },
+    [categories]
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -59,6 +70,32 @@ export function Categories() {
 
     fetchCategories();
 
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchExpenses() {
+      try {
+        const response = await fetch("http://localhost:8080/expenses");
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        if (isMounted) {
+          setExpenses(data || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch expenses:", error);
+        if (isMounted) {
+          setExpenses([]);
+        }
+      }
+    }
+
+    fetchExpenses();
     return () => {
       isMounted = false;
     };
@@ -153,46 +190,106 @@ export function Categories() {
     <div>
       <h1 className="text-2xl font-bold mb-4">Categories</h1>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          <Button className="mb-4">+ Add Category</Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Category</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                required
-                value={newCategory.name}
-                onChange={(e) =>
-                  setNewCategory({ ...newCategory, name: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                required
-                value={newCategory.description}
-                onChange={(e) =>
-                  setNewCategory({
-                    ...newCategory,
-                    description: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              Add Category
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="overflow-auto">
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button className="mb-4">+ Add Category</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Category</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    required
+                    value={newCategory.name}
+                    onChange={(e) =>
+                      setNewCategory({ ...newCategory, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Input
+                    id="description"
+                    required
+                    value={newCategory.description}
+                    onChange={(e) =>
+                      setNewCategory({
+                        ...newCategory,
+                        description: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <Button type="submit" className="w-full">
+                  Add Category
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <table className="min-w-full bg-white">
+            <thead>
+              <tr>
+                <th className="border px-4 py-2">Name</th>
+                <th className="border px-4 py-2">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories?.length > 0 ? (
+                categories.map((category) => (
+                  <tr key={category.id} className="group hover:bg-gray-50">
+                    <td className="border px-4 py-2">{category.name}</td>
+                    <td className="border px-4 py-2 relative">
+                      {category.description}
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleStartEdit(category)}
+                          className="h-8 w-8 hover:bg-gray-100/50"
+                        >
+                          <Pencil className="h-4 w-4 text-blue-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(category.id)}
+                          className="h-8 w-8 hover:bg-gray-100/50"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={2}
+                    className="border px-4 py-2 text-center text-gray-500"
+                  >
+                    No categories found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <CategoryExpenseChart
+            expenses={expenses}
+            categories={categories}
+            getCategoryName={getCategoryName}
+          />
+        </div>
+      </div>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
@@ -232,54 +329,6 @@ export function Categories() {
           </form>
         </DialogContent>
       </Dialog>
-
-      <table className="min-w-full bg-white">
-        <thead>
-          <tr>
-            <th className="border px-4 py-2">Name</th>
-            <th className="border px-4 py-2">Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          {categories?.length > 0 ? (
-            categories.map((category) => (
-              <tr key={category.id} className="group hover:bg-gray-50">
-                <td className="border px-4 py-2">{category.name}</td>
-                <td className="border px-4 py-2 relative">
-                  {category.description}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleStartEdit(category)}
-                      className="h-8 w-8 hover:bg-gray-100/50"
-                    >
-                      <Pencil className="h-4 w-4 text-blue-500" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(category.id)}
-                      className="h-8 w-8 hover:bg-gray-100/50"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td
-                colSpan={2}
-                className="border px-4 py-2 text-center text-gray-500"
-              >
-                No categories found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
     </div>
   );
 }
