@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Income as IncomeType } from "../types/income";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, Pencil } from "lucide-react";
 import { IncomeSourceChart } from "@/components/charts/income-source-chart";
+import { SortButton } from "@/components/ui/sort-button";
+
+type SortField = "amount" | "date";
+type SortDirection = "asc" | "desc" | null;
+
+interface SortState {
+  field: SortField | null;
+  direction: SortDirection;
+}
 
 export function Income() {
   const [incomes, setIncomes] = useState<IncomeType[]>([]);
@@ -23,6 +32,10 @@ export function Income() {
   });
   const [editingIncome, setEditingIncome] = useState<IncomeType | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [sortState, setSortState] = useState<SortState>({
+    field: null,
+    direction: null,
+  });
 
   useEffect(() => {
     fetch("http://localhost:8080/incomes")
@@ -121,6 +134,42 @@ export function Income() {
     setIsEditDialogOpen(true);
   }
 
+  const handleSort = (field: SortField) => {
+    setSortState((prev) => ({
+      field,
+      direction:
+        prev.field === field
+          ? prev.direction === null
+            ? "asc"
+            : prev.direction === "asc"
+            ? "desc"
+            : null
+          : "asc",
+    }));
+  };
+
+  const sortedIncomes = useMemo(() => {
+    if (!sortState.field || !sortState.direction) {
+      return incomes;
+    }
+
+    return [...incomes].sort((a, b) => {
+      if (sortState.field === "date") {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return sortState.direction === "asc" ? dateA - dateB : dateB - dateA;
+      }
+
+      if (sortState.field === "amount") {
+        return sortState.direction === "asc"
+          ? a.amount - b.amount
+          : b.amount - a.amount;
+      }
+
+      return 0;
+    });
+  }, [sortState.field, sortState.direction, incomes]);
+
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Income</h1>
@@ -182,37 +231,55 @@ export function Income() {
           <table className="min-w-full bg-white">
             <thead>
               <tr>
-                <th className="border px-4 py-2">Amount</th>
-                <th className="border px-4 py-2">Date</th>
                 <th className="border px-4 py-2">Source</th>
+                <th className="border px-4 py-2">
+                  <SortButton
+                    label="Amount"
+                    active={sortState.field === "amount"}
+                    direction={
+                      sortState.field === "amount" ? sortState.direction : null
+                    }
+                    onClick={() => handleSort("amount")}
+                  />
+                </th>
+                <th className="border px-4 py-2">
+                  <SortButton
+                    label="Date"
+                    active={sortState.field === "date"}
+                    direction={
+                      sortState.field === "date" ? sortState.direction : null
+                    }
+                    onClick={() => handleSort("date")}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody>
-              {incomes.map((income) => (
+              {sortedIncomes.map((income) => (
                 <tr key={income.id} className="group hover:bg-gray-50">
+                  <td className="border px-4 py-2">{income.source}</td>
                   <td className="border px-4 py-2">${income.amount}</td>
-                  <td className="border px-4 py-2">
-                    {new Date(income.date).toLocaleDateString()}
-                  </td>
-                  <td className="border px-4 py-2 relative">
-                    {income.source}
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleStartEdit(income)}
-                        className="h-8 w-8 hover:bg-gray-100/50"
-                      >
-                        <Pencil className="h-4 w-4 text-blue-500" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(income.id)}
-                        className="h-8 w-8 hover:bg-gray-100/50"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                  <td className="border px-4 py-2 relative min-w-[200px]">
+                    <div className="flex justify-between items-center gap-2">
+                      <span>{new Date(income.date).toLocaleDateString()}</span>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleStartEdit(income)}
+                          className="h-8 w-8 hover:bg-gray-100/50"
+                        >
+                          <Pencil className="h-4 w-4 text-blue-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(income.id)}
+                          className="h-8 w-8 hover:bg-gray-100/50"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
                     </div>
                   </td>
                 </tr>
