@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, Pencil } from "lucide-react";
+import { IncomeSourceChart } from "@/components/charts/income-source-chart";
 
 export function Income() {
   const [incomes, setIncomes] = useState<IncomeType[]>([]);
@@ -124,57 +125,106 @@ export function Income() {
     <div>
       <h1 className="text-2xl font-bold mb-4">Income</h1>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          <Button className="mb-4">+ Add Income</Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Income</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                required
-                value={newIncome.amount}
-                onChange={(e) =>
-                  setNewIncome({ ...newIncome, amount: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                required
-                value={newIncome.date}
-                onChange={(e) =>
-                  setNewIncome({ ...newIncome, date: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="source">Source</Label>
-              <Input
-                id="source"
-                required
-                value={newIncome.source}
-                onChange={(e) =>
-                  setNewIncome({ ...newIncome, source: e.target.value })
-                }
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              Add Income
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="overflow-auto">
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button className="mb-4">+ Add Income</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Income</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    required
+                    value={newIncome.amount}
+                    onChange={(e) =>
+                      setNewIncome({ ...newIncome, amount: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    required
+                    value={newIncome.date}
+                    onChange={(e) =>
+                      setNewIncome({ ...newIncome, date: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="source">Source</Label>
+                  <Input
+                    id="source"
+                    required
+                    value={newIncome.source}
+                    onChange={(e) =>
+                      setNewIncome({ ...newIncome, source: e.target.value })
+                    }
+                  />
+                </div>
+                <Button type="submit" className="w-full">
+                  Add Income
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <table className="min-w-full bg-white">
+            <thead>
+              <tr>
+                <th className="border px-4 py-2">Amount</th>
+                <th className="border px-4 py-2">Date</th>
+                <th className="border px-4 py-2">Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              {incomes.map((income) => (
+                <tr key={income.id} className="group hover:bg-gray-50">
+                  <td className="border px-4 py-2">${income.amount}</td>
+                  <td className="border px-4 py-2">
+                    {new Date(income.date).toLocaleDateString()}
+                  </td>
+                  <td className="border px-4 py-2 relative">
+                    {income.source}
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleStartEdit(income)}
+                        className="h-8 w-8 hover:bg-gray-100/50"
+                      >
+                        <Pencil className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(income.id)}
+                        className="h-8 w-8 hover:bg-gray-100/50"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <IncomeSourceChart incomes={incomes} />
+        </div>
+      </div>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
@@ -232,47 +282,6 @@ export function Income() {
           </form>
         </DialogContent>
       </Dialog>
-
-      <table className="min-w-full bg-white">
-        <thead>
-          <tr>
-            <th className="border px-4 py-2">Amount</th>
-            <th className="border px-4 py-2">Date</th>
-            <th className="border px-4 py-2">Source</th>
-          </tr>
-        </thead>
-        <tbody>
-          {incomes.map((income) => (
-            <tr key={income.id} className="group hover:bg-gray-50">
-              <td className="border px-4 py-2">${income.amount}</td>
-              <td className="border px-4 py-2">
-                {new Date(income.date).toLocaleDateString()}
-              </td>
-              <td className="border px-4 py-2 relative">
-                {income.source}
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleStartEdit(income)}
-                    className="h-8 w-8 hover:bg-gray-100/50"
-                  >
-                    <Pencil className="h-4 w-4 text-blue-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(income.id)}
-                    className="h-8 w-8 hover:bg-gray-100/50"
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }
