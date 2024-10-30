@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Expense } from "../types/expense";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,16 @@ import { Label } from "@/components/ui/label";
 import { Trash2, Pencil } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Category } from "../types/category";
+import { MonthlyExpenseChart } from "@/components/charts/monthly-expense-chart";
+import { SortButton } from "@/components/ui/sort-button";
+
+type SortField = "category" | "amount" | "date";
+type SortDirection = "asc" | "desc" | null;
+
+interface SortState {
+  field: SortField | null;
+  direction: SortDirection;
+}
 
 export function ExpensesPage() {
   return (
@@ -35,6 +45,10 @@ export function Expenses() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [sortState, setSortState] = useState<SortState>({
+    field: null,
+    direction: null,
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -91,10 +105,57 @@ export function Expenses() {
     };
   }, []);
 
-  const getCategoryName = (categoryId: number) => {
-    const category = categories.find((cat) => cat.id === categoryId);
-    return category?.name || "Unknown Category";
+  const getCategoryName = useCallback(
+    (categoryId: number) => {
+      const category = categories.find((cat) => cat.id === categoryId);
+      return category?.name || "Unknown Category";
+    },
+    [categories]
+  );
+
+  const handleSort = (field: SortField) => {
+    setSortState((prev) => ({
+      field,
+      direction:
+        prev.field === field
+          ? prev.direction === null
+            ? "asc"
+            : prev.direction === "asc"
+            ? "desc"
+            : null
+          : "asc",
+    }));
   };
+
+  const sortedExpenses = useMemo(() => {
+    if (!sortState.field || !sortState.direction) {
+      return expenses;
+    }
+
+    return [...expenses].sort((a, b) => {
+      if (sortState.field === "category") {
+        const categoryA = getCategoryName(a.category_id).toLowerCase();
+        const categoryB = getCategoryName(b.category_id).toLowerCase();
+        return sortState.direction === "asc"
+          ? categoryA.localeCompare(categoryB)
+          : categoryB.localeCompare(categoryA);
+      }
+
+      if (sortState.field === "date") {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return sortState.direction === "asc" ? dateA - dateB : dateB - dateA;
+      }
+
+      if (sortState.field === "amount") {
+        return sortState.direction === "asc"
+          ? a.amount - b.amount
+          : b.amount - a.amount;
+      }
+
+      return 0; // Default case
+    });
+  }, [sortState.field, sortState.direction, expenses, getCategoryName]);
 
   if (isLoading) {
     return <div className="p-4">Loading expenses...</div>;
@@ -365,59 +426,102 @@ export function Expenses() {
         </DialogContent>
       </Dialog>
 
-      <table className="min-w-full bg-white">
-        <thead>
-          <tr>
-            <th className="border px-4 py-2">Name</th>
-            <th className="border px-4 py-2">Category</th>
-            <th className="border px-4 py-2">Amount</th>
-            <th className="border px-4 py-2">Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {expenses?.length > 0 ? (
-            expenses.map((expense) => (
-              <tr key={expense.id} className="group hover:bg-gray-50">
-                <td className="border px-4 py-2">{expense.name}</td>
-                <td className="border px-4 py-2">
-                  {getCategoryName(expense.category_id)}
-                </td>
-                <td className="border px-4 py-2">${expense.amount}</td>
-                <td className="border px-4 py-2 relative">
-                  {new Date(expense.date).toLocaleDateString()}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleStartEdit(expense)}
-                      className="h-8 w-8 hover:bg-gray-100/50"
-                    >
-                      <Pencil className="h-4 w-4 text-blue-500" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(expense.id)}
-                      className="h-8 w-8 hover:bg-gray-100/50"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                </td>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Table Section */}
+        <div className="overflow-auto">
+          <table className="min-w-full bg-white">
+            <thead>
+              <tr>
+                <th className="border px-4 py-2">Name</th>
+                <th className="border px-4 py-2">
+                  <SortButton
+                    label="Category"
+                    active={sortState.field === "category"}
+                    direction={
+                      sortState.field === "category"
+                        ? sortState.direction
+                        : null
+                    }
+                    onClick={() => handleSort("category")}
+                  />
+                </th>
+                <th className="border px-4 py-2">
+                  <SortButton
+                    label="Amount"
+                    active={sortState.field === "amount"}
+                    direction={
+                      sortState.field === "amount" ? sortState.direction : null
+                    }
+                    onClick={() => handleSort("amount")}
+                  />
+                </th>
+                <th className="border px-4 py-2">
+                  <SortButton
+                    label="Date"
+                    active={sortState.field === "date"}
+                    direction={
+                      sortState.field === "date" ? sortState.direction : null
+                    }
+                    onClick={() => handleSort("date")}
+                  />
+                </th>
               </tr>
-            ))
-          ) : (
-            <tr>
-              <td
-                colSpan={4}
-                className="border px-4 py-2 text-center text-gray-500"
-              >
-                No expenses found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {sortedExpenses?.length > 0 ? (
+                sortedExpenses.map((expense) => (
+                  <tr key={expense.id} className="group hover:bg-gray-50">
+                    <td className="border px-4 py-2">{expense.name}</td>
+                    <td className="border px-4 py-2">
+                      {getCategoryName(expense.category_id)}
+                    </td>
+                    <td className="border px-4 py-2">${expense.amount}</td>
+                    <td className="border px-4 py-2 relative min-w-[200px]">
+                      <div className="flex justify-between items-center gap-2">
+                        <span>
+                          {new Date(expense.date).toLocaleDateString()}
+                        </span>
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleStartEdit(expense)}
+                            className="h-8 w-8 hover:bg-gray-100/50"
+                          >
+                            <Pencil className="h-4 w-4 text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(expense.id)}
+                            className="h-8 w-8 hover:bg-gray-100/50"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="border px-4 py-2 text-center text-gray-500"
+                  >
+                    No expenses found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Chart Section */}
+        <div className="h-full">
+          <MonthlyExpenseChart expenses={expenses} />
+        </div>
+      </div>
     </div>
   );
 }
