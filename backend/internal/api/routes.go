@@ -2,18 +2,19 @@ package api
 
 import (
 	"database/sql"
+	"expense-tracker/internal/api/middleware"
 	"net/http"
 )
 
 func NewRouter(db *sql.DB) http.Handler {
-    mux := http.NewServeMux()
+	mux := http.NewServeMux()
 
-    // Category routes
-    mux.HandleFunc("GET /categories", getCategoriesHandler(db))
-    mux.HandleFunc("GET /categories/{name}", getCategoryByNameHandler(db))
-    mux.HandleFunc("POST /categories", createCategoryHandler(db))
-    mux.HandleFunc("PUT /categories/{name}", updateCategoryHandler(db))
-    mux.HandleFunc("DELETE /categories/{name}", deleteCategoryHandler(db))
+	// Category routes
+	mux.HandleFunc("GET /categories", getCategoriesHandler(db))
+	mux.HandleFunc("GET /categories/{id}", getCategoryByIDHandler(db))
+	mux.HandleFunc("POST /categories", createCategoryHandler(db))
+	mux.HandleFunc("PUT /categories/{id}", updateCategoryHandler(db))
+	mux.HandleFunc("DELETE /categories/{id}", deleteCategoryHandler(db))
 
 	// Income routes
 	mux.HandleFunc("GET /incomes", getIncomesHandler(db))
@@ -29,6 +30,7 @@ func NewRouter(db *sql.DB) http.Handler {
 	mux.HandleFunc("PUT /expenses/{id}", updateExpenseHandler(db))
 	mux.HandleFunc("DELETE /expenses/{id}", deleteExpenseHandler(db))
 
-	return mux
+	// Wrap the mux with CORS middleware
+	return middleware.CORS(mux)
 }
 
