@@ -30,7 +30,13 @@ func NewRouter(db *sql.DB) http.Handler {
 	mux.HandleFunc("PUT /expenses/{id}", updateExpenseHandler(db))
 	mux.HandleFunc("DELETE /expenses/{id}", deleteExpenseHandler(db))
 
+	// Budget routes
+	mux.HandleFunc("GET /budgets", getBudgetsHandler(db))
+	mux.HandleFunc("GET /budgets/category/{category}", getBudgetByCategoryHandler(db))
+	mux.HandleFunc("POST /budgets", createBudgetHandler(db))
+	mux.HandleFunc("PUT /budgets/category/{category}", updateBudgetHandler(db))
+	mux.HandleFunc("DELETE /budgets/category/{category}", deleteBudgetHandler(db))
+
 	// Wrap the mux with CORS middleware
 	return middleware.CORS(mux)
 }
-
