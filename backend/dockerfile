@@ -1,0 +1,23 @@
+FROM golang:1.23-alpine
+
+RUN addgroup -S prod && adduser -S -G prod prod
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+
+RUN go mod download
+
+COPY . .
+
+RUN chown -R prod:prod /app
+
+USER prod
+
+RUN go build -o expense-tracker ./cmd/expense-tracker/main.go
+
+ENV DATABASE_PUBLIC_URL=postgresql://postgres:fyCseTFDwmxmBZWEyHcauPxsledzDGhH@junction.proxy.rlwy.net:13881/railway
+
+EXPOSE 8080
+
+CMD ["./expense-tracker"]
