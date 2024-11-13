@@ -1,7 +1,5 @@
 FROM golang:1.23-alpine
 
-RUN addgroup -S prod && adduser -S -G prod prod
-
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -9,10 +7,6 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-
-RUN chown -R prod:prod /app
-
-USER prod
 
 RUN go build -o expense-tracker ./cmd/expense-tracker/main.go
 
