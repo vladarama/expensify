@@ -8,10 +8,10 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o expense-tracker ./cmd/expense-tracker/main.go
-
 ENV DATABASE_PUBLIC_URL=postgresql://postgres:fyCseTFDwmxmBZWEyHcauPxsledzDGhH@junction.proxy.rlwy.net:13881/railway
 
 EXPOSE 8080
+
+RUN go build -o expense-tracker ./cmd/expense-tracker/main.go
 
 CMD ["./expense-tracker"]
