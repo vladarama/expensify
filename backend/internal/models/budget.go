@@ -3,7 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"strings"
+	"strconv"
 	"time"
 )
 
@@ -40,9 +40,14 @@ func GetBudgets(db *sql.DB) ([]Budget, error) {
 
 // GetBudgetByCategory retrieves a budget by category name.
 func GetBudgetByCategory(db *sql.DB, category string) (Budget, error) {
+	categoryID, err := strconv.ParseInt(category, 10, 64)
+	if err != nil {
+		return Budget{}, err
+	}
+
 	var budget Budget
-	err := db.QueryRow("SELECT id, category_id, amount, spent, start_date, end_date FROM Budget WHERE category_id = $1",
-		strings.ToLower(category)).Scan(&budget.ID, &budget.CategoryID, &budget.Amount, &budget.Spent, &budget.StartDate, &budget.EndDate)
+	err = db.QueryRow("SELECT id, category_id, amount, spent, start_date, end_date FROM Budget WHERE category_id = $1",
+		categoryID).Scan(&budget.ID, &budget.CategoryID, &budget.Amount, &budget.Spent, &budget.StartDate, &budget.EndDate)
 	if err != nil {
 		return Budget{}, err
 	}
@@ -55,16 +60,16 @@ func CreateBudget(db *sql.DB, budget Budget) (Budget, error) {
 		return Budget{}, errors.New("category cannot be empty")
 	}
 	if budget.Amount <= 0 {
-		return Budget{}, errors.New("Amount must be greater than zero")
+		return Budget{}, errors.New("amount must be greater than zero")
 	}
 	if budget.StartDate.IsZero() {
-		return Budget{}, errors.New("Start date must be provided")
+		return Budget{}, errors.New("start date must be provided")
 	}
 	if budget.EndDate.IsZero() {
-		return Budget{}, errors.New("End date must be provided")
+		return Budget{}, errors.New("end date must be provided")
 	}
 	if budget.EndDate.Before(budget.StartDate) {
-		return Budget{}, errors.New("End date must be after start date")
+		return Budget{}, errors.New("end date must be after start date")
 	}
 
 	var id int64
@@ -80,20 +85,20 @@ func CreateBudget(db *sql.DB, budget Budget) (Budget, error) {
 // UpdateBudget updates an existing budget's information.
 func UpdateBudget(db *sql.DB, budget Budget) (Budget, error) {
 	if budget.CategoryID == 0 {
-		return Budget{}, errors.New("Category ID must be provided")
+		return Budget{}, errors.New("category id must be provided")
 	}
 
 	if budget.Amount <= 0 {
-		return Budget{}, errors.New("Amount must be greater than zero")
+		return Budget{}, errors.New("amount must be greater than zero")
 	}
 	if budget.StartDate.IsZero() {
-		return Budget{}, errors.New("Start date must be provided")
+		return Budget{}, errors.New("start date must be provided")
 	}
 	if budget.EndDate.IsZero() {
-		return Budget{}, errors.New("End date must be provided")
+		return Budget{}, errors.New("end date must be provided")
 	}
 	if budget.EndDate.Before(budget.StartDate) {
-		return Budget{}, errors.New("End date must be after start date")
+		return Budget{}, errors.New("end date must be after start date")
 	}
 
 	_, err := db.Exec("UPDATE Budget SET amount = $1, spent = $2, start_date = $3, end_date = $4 WHERE category_id = $5",
@@ -106,7 +111,11 @@ func UpdateBudget(db *sql.DB, budget Budget) (Budget, error) {
 
 // DeleteBudget removes a budget by category name.
 func DeleteBudget(db *sql.DB, category string) error {
-	_, err := db.Exec("DELETE FROM Budget WHERE category = $1", strings.ToLower(category))
+	categoryID, err := strconv.ParseInt(category, 10, 64)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec("DELETE FROM Budget WHERE category_id = $1", categoryID)
 	if err != nil {
 		return err
 	}

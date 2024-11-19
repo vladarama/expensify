@@ -83,6 +83,7 @@ func initializeDatabase(db *sql.DB) error {
     CREATE TABLE IF NOT EXISTS Expense (
         id SERIAL PRIMARY KEY,
         category_id INT REFERENCES Category(id) ON DELETE SET NULL,
+        description VARCHAR(255) NOT NULL,
         amount NUMERIC(10, 2) NOT NULL,
         date DATE NOT NULL
     );

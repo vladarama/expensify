@@ -41,17 +41,17 @@ func TestGetBudgetByCategory(t *testing.T) {
 	}
 	defer db.Close()
 
-	rows := sqlmock.NewRows([]string{"id", "category_id", "Amount", "spent", "start_date", "end_date"}).
+	rows := sqlmock.NewRows([]string{"id", "category_id", "amount", "spent", "start_date", "end_date"}).
 		AddRow(1, int64(1), 500.0, 200.0, time.Now(), time.Now().Add(30*time.Hour*24))
 
-	mock.ExpectQuery("SELECT id, category_id, Amount, spent, start_date, end_date FROM Budget WHERE category_id = \\$1").
+	mock.ExpectQuery("SELECT id, category_id, amount, spent, start_date, end_date FROM Budget WHERE category_id = \\$1").
 		WithArgs(int64(1)).
 		WillReturnRows(rows)
 
-	budget, err := models.GetBudgetByCategory(db, "1") // Pass CategoryID as string
+	budget, err := models.GetBudgetByCategory(db, "1")
 
 	assert.NoError(t, err)
-	assert.Equal(t, int64(1), budget.CategoryID) // Use int64 for CategoryID
+	assert.Equal(t, int64(1), budget.CategoryID)
 	assert.Equal(t, float64(500), budget.Amount)
 	assert.Equal(t, float64(200), budget.Spent)
 }
@@ -137,7 +137,7 @@ func TestUpdateBudgetWithEmptyCategory(t *testing.T) {
 	defer db.Close()
 
 	budget := models.Budget{
-		CategoryID: 0, // Assuming you want to allow 0 but handle it appropriately in your model logic
+		CategoryID: 0,
 		Amount:     600.0,
 		Spent:      250.0,
 		StartDate:  time.Now(),
@@ -146,7 +146,7 @@ func TestUpdateBudgetWithEmptyCategory(t *testing.T) {
 	_, err = models.UpdateBudget(db, budget)
 
 	assert.Error(t, err)
-	assert.Equal(t, errors.New("category cannot be empty"), err)
+	assert.Equal(t, errors.New("category id must be provided"), err)
 }
 
 func TestDeleteBudget(t *testing.T) {
@@ -157,11 +157,10 @@ func TestDeleteBudget(t *testing.T) {
 	defer db.Close()
 
 	mock.ExpectExec("DELETE FROM Budget WHERE category_id = \\$1").
-		WithArgs(int64(1)). // Ensure you're using the correct SQL type here
+		WithArgs(int64(1)).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	// Pass the CategoryID as a string if models.DeleteBudget requires a string
-	err = models.DeleteBudget(db, "1") // Pass CategoryID as string
+	err = models.DeleteBudget(db, "1")
 
 	assert.NoError(t, err)
 }

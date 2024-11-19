@@ -37,7 +37,7 @@ export function Expenses() {
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [newExpense, setNewExpense] = useState({
-    name: "",
+    description: "",
     amount: "",
     date: new Date().toISOString().split("T")[0],
     category_id: "",
@@ -180,7 +180,7 @@ export function Expenses() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: newExpense.name,
+          description: newExpense.description,
           amount: parseFloat(newExpense.amount),
           date: formattedDate,
           category_id: category.id,
@@ -192,7 +192,7 @@ export function Expenses() {
         setExpenses([...expenses, data]);
         setIsOpen(false);
         setNewExpense({
-          name: "",
+          description: "",
           amount: "",
           date: new Date().toISOString().split("T")[0],
           category_id: "",
@@ -279,14 +279,14 @@ export function Expenses() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="description">Description</Label>
               <Input
-                id="name"
+                id="description"
                 type="text"
                 required
-                value={newExpense.name}
+                value={newExpense.description}
                 onChange={(e) =>
-                  setNewExpense({ ...newExpense, name: e.target.value })
+                  setNewExpense({ ...newExpense, description: e.target.value })
                 }
               />
             </div>
@@ -353,10 +353,10 @@ export function Expenses() {
                 id="edit-name"
                 type="text"
                 required
-                value={editingExpense?.name || ""}
+                value={editingExpense?.description || ""}
                 onChange={(e) =>
                   setEditingExpense((prev) =>
-                    prev ? { ...prev, name: e.target.value } : null
+                    prev ? { ...prev, description: e.target.value } : null
                   )
                 }
               />
@@ -432,7 +432,7 @@ export function Expenses() {
           <table className="min-w-full bg-white">
             <thead>
               <tr>
-                <th className="border px-4 py-2">Name</th>
+                <th className="border px-4 py-2">Description</th>
                 <th className="border px-4 py-2">
                   <SortButton
                     label="Category"
@@ -471,7 +471,7 @@ export function Expenses() {
               {sortedExpenses?.length > 0 ? (
                 sortedExpenses.map((expense) => (
                   <tr key={expense.id} className="group hover:bg-gray-50">
-                    <td className="border px-4 py-2">{expense.name}</td>
+                    <td className="border px-4 py-2">{expense.description}</td>
                     <td className="border px-4 py-2">
                       {getCategoryName(expense.category_id)}
                     </td>

@@ -49,21 +49,27 @@ func getExpenseByIDHandler(db *sql.DB) http.HandlerFunc {
 func createExpenseHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var expense models.Expense
-		err := json.NewDecoder(r.Body).Decode(&expense)
-		if err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&expense); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		createdExpense, err := models.CreateExpense(db, expense)
+		err := db.QueryRow(
+			"INSERT INTO Expense (category_id, description, amount, date) VALUES ($1, $2, $3, $4) RETURNING id, category_id, description, amount, date",
+			expense.CategoryID,
+			expense.Description,
+			expense.Amount,
+			expense.Date,
+		).Scan(&expense.ID, &expense.CategoryID, &expense.Description, &expense.Amount, &expense.Date)
+
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(createdExpense)
+		json.NewEncoder(w).Encode(expense)
 	}
 }
 

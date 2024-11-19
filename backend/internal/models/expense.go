@@ -13,7 +13,7 @@ type Expense struct {
 	CategoryID  int64     `json:"category_id"`
 	Amount      float64   `json:"amount"`
 	Date        time.Time `json:"date"`
-	Description string    `json:"description"` // Added Description field
+	Description string    `json:"description"`
 }
 
 func GetExpenses(db *sql.DB) ([]Expense, error) {
@@ -68,9 +68,11 @@ func CreateExpense(db *sql.DB, expense Expense) (Expense, error) {
 		return Expense{}, err
 	}
 
-	// Insert the new expense into the database
-	err := db.QueryRow("INSERT INTO Expense (category_id, amount, date, description) VALUES ($1, $2, $3, $4) RETURNING id",
-		expense.CategoryID, expense.Amount, expense.Date, expense.Description).Scan(&expense.ID)
+	// Insert the new expense and get the ID using RETURNING
+	err := db.QueryRow(
+		"INSERT INTO Expense (category_id, amount, date, description) VALUES ($1, $2, $3, $4) RETURNING id, category_id, amount, date, description",
+		expense.CategoryID, expense.Amount, expense.Date, expense.Description,
+	).Scan(&expense.ID, &expense.CategoryID, &expense.Amount, &expense.Date, &expense.Description)
 	if err != nil {
 		return Expense{}, err
 	}
@@ -103,74 +105,47 @@ func validateUpdateExpense(expense Expense, existingExpense Expense) error {
 
 // UpdateExpense updates an existing expense in the database and updates the associated budget.
 func UpdateExpense(db *sql.DB, expense Expense) (Expense, error) {
+	// Get current expense first
 	currentExpense, err := GetExpenseByID(db, expense.ID)
 	if err != nil {
 		return Expense{}, err
 	}
-
-	// Flag to check if there are any changes
-	changesMade := false
 
 	// Validate fields
 	if err := validateUpdateExpense(expense, currentExpense); err != nil {
 		return Expense{}, err
 	}
 
-	// Form the SQL query for updating the expense
+	// Build update query
 	query := "UPDATE Expense SET"
 	args := []interface{}{}
 	argCount := 1
+	updates := []string{}
 
-	categoryChanged := false
-
-	// Check if the category has changed
-	if expense.CategoryID != 0 && expense.CategoryID != currentExpense.CategoryID {
-		changesMade = true
-		categoryChanged = true
-		query += fmt.Sprintf(" category_id = $%d,", argCount)
-		args = append(args, expense.CategoryID)
-		argCount++
-	} else {
-		expense.CategoryID = currentExpense.CategoryID
-	}
-
-	// Check if the amount has changed
-	if expense.Amount != 0 && expense.Amount != currentExpense.Amount {
-		changesMade = true
-		query += fmt.Sprintf(" amount = $%d,", argCount)
+	if expense.Amount != 0 {
+		updates = append(updates, fmt.Sprintf("amount = $%d", argCount))
 		args = append(args, expense.Amount)
 		argCount++
-	} else {
-		expense.Amount = currentExpense.Amount
 	}
 
-	// Check if the date has changed
-	if !expense.Date.IsZero() && !expense.Date.Equal(currentExpense.Date) {
-		changesMade = true
-		query += fmt.Sprintf(" date = $%d,", argCount)
-		args = append(args, expense.Date)
-		argCount++
-	} else {
-		expense.Date = currentExpense.Date
-	}
-
-	// If no changes were made, return the current expense without updating
-	if !changesMade {
-		return currentExpense, nil // No changes made, ignore the update request
-	}
-
-	// Check if the description has changed
-	if expense.Description != "" && expense.Description != currentExpense.Description {
-		changesMade = true
-		query += fmt.Sprintf(" description = $%d,", argCount)
+	if expense.Description != "" {
+		updates = append(updates, fmt.Sprintf("description = $%d", argCount))
 		args = append(args, expense.Description)
 		argCount++
-	} else {
-		expense.Description = currentExpense.Description
+	}
+
+	if !expense.Date.IsZero() {
+		updates = append(updates, fmt.Sprintf("date = $%d", argCount))
+		args = append(args, expense.Date)
+		argCount++
+	}
+
+	if len(updates) == 0 {
+		return currentExpense, nil // No changes made
 	}
 
 	// Finalize the query
-	query = strings.TrimSuffix(query, ",")
+	query += " " + strings.Join(updates, ", ")
 	query += fmt.Sprintf(" WHERE id = $%d", argCount)
 	args = append(args, expense.ID)
 
@@ -178,27 +153,8 @@ func UpdateExpense(db *sql.DB, expense Expense) (Expense, error) {
 		return Expense{}, err
 	}
 
-	// Update the budget after the query
-	if categoryChanged {
-		// Check if budget exists for the old category before removing
-		if budgetExists, err := checkBudgetExists(db, currentExpense.CategoryID); err != nil {
-			return Expense{}, err
-		} else if budgetExists {
-			if err := updateBudgetSpent(db, currentExpense.CategoryID, -currentExpense.Amount); err != nil {
-				return Expense{}, err
-			}
-		}
-
-		// Check if budget exists for the new category before adding
-		if budgetExists, err := checkBudgetExists(db, expense.CategoryID); err != nil {
-			return Expense{}, err
-		} else if budgetExists {
-			if err := updateBudgetSpent(db, expense.CategoryID, expense.Amount); err != nil {
-				return Expense{}, err
-			}
-		}
-	} else if expense.Amount != currentExpense.Amount {
-		// Adjust the amount if category remains the same
+	// Update the budget if amount changed
+	if expense.Amount != 0 && expense.Amount != currentExpense.Amount {
 		if budgetExists, err := checkBudgetExists(db, currentExpense.CategoryID); err != nil {
 			return Expense{}, err
 		} else if budgetExists {
@@ -208,7 +164,19 @@ func UpdateExpense(db *sql.DB, expense Expense) (Expense, error) {
 		}
 	}
 
-	return expense, nil
+	// Merge the updated fields with current expense
+	updatedExpense := currentExpense
+	if expense.Amount != 0 {
+		updatedExpense.Amount = expense.Amount
+	}
+	if expense.Description != "" {
+		updatedExpense.Description = expense.Description
+	}
+	if !expense.Date.IsZero() {
+		updatedExpense.Date = expense.Date
+	}
+
+	return updatedExpense, nil
 }
 
 // DeleteExpense removes an expense from the database and updates the associated budget.
