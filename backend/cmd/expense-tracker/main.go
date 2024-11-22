@@ -30,7 +30,7 @@ func main() {
 	if port == "" {
 		port = "8080" // Default port if not specified
 	}
-	
+
 	// Open connection to the database
 	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
@@ -56,15 +56,14 @@ func main() {
 	router := api.NewRouter(db)
 
 	// Start the HTTP server
-    log.Printf("Server is running on port %s", port)
-    if err := http.ListenAndServe(":"+port, router); err != nil {
-        log.Fatalf("Failed to start server: %v", err)
-    }
+	log.Printf("Server is running on port %s", port)
+	if err := http.ListenAndServe(":"+port, router); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
 
-
 func initializeDatabase(db *sql.DB) error {
-    schema := `
+	schema := `
     -- Table: Category
     CREATE TABLE IF NOT EXISTS Category (
         id SERIAL PRIMARY KEY,
@@ -103,7 +102,23 @@ func initializeDatabase(db *sql.DB) error {
         income_id INT REFERENCES Income(id) ON DELETE CASCADE
     );`
 
-    // Execute the schema
-    _, err := db.Exec(schema)
-    return err
+	// Execute the schema
+	_, err := db.Exec(schema)
+	if err != nil {
+		log.Fatal("failed to initialize database schema: %w", err)
+	}
+
+	// Ensure the "Other" category exists
+	query := `
+	 INSERT INTO Category (id, name, description)
+	 VALUES (1, 'Other', 'Default category for uncategorized items')
+	 ON CONFLICT (id) DO NOTHING;
+	 `
+	_, err = db.Exec(query)
+
+	if err != nil {
+		log.Fatal("failed to ensure default 'Other' category: %w", err)
+	}
+
+	return err
 }

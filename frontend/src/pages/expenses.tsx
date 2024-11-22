@@ -426,7 +426,8 @@ export function Expenses() {
         </DialogContent>
       </Dialog>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-8"> */}
+      <div className="flex flex-col lg:flex-row gap-8">
         {/* Table Section */}
         <div className="overflow-auto">
           <table className="min-w-full bg-white">

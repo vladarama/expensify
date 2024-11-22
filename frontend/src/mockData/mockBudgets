@@ -1,0 +1,23 @@
+export const mockBudgets = [
+  {
+    categoryID: 1,
+    amount: 5000,
+    spent: 2000,
+    startDate: "2023-01-01",
+    endDate: "2023-12-31",
+  },
+  {
+    categoryID: 2,
+    amount: 3000,
+    spent: 1500,
+    startDate: "2023-02-01",
+    endDate: "2023-12-31",
+  },
+  {
+    categoryID: 3,
+    amount: 7000,
+    spent: 5000,
+    startDate: "2023-03-01",
+    endDate: "2023-12-31",
+  },
+];

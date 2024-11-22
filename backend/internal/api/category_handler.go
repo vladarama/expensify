@@ -74,6 +74,12 @@ func updateCategoryHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// Prevent updates to the "Other" category
+		if id == 1 { // Assuming "Other" has ID 1
+			http.Error(w, "Cannot update the 'Other' category", http.StatusForbidden)
+			return
+		}
+
 		var category models.Category
 		if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -101,6 +107,13 @@ func deleteCategoryHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// Prevent deletion of the "Other" category
+		if id == 1 { // Assuming "Other" has ID 1
+			http.Error(w, "Cannot delete the 'Other' category", http.StatusForbidden)
+			return
+		}
+
+		// Proceed with deletion if not "Other"
 		if err := models.DeleteCategory(db, id); err != nil {
 			if err == sql.ErrNoRows {
 				http.Error(w, "Category not found", http.StatusNotFound)

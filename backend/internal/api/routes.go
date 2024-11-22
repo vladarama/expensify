@@ -32,10 +32,11 @@ func NewRouter(db *sql.DB) http.Handler {
 
 	// Budget routes
 	mux.HandleFunc("GET /budgets", getBudgetsHandler(db))
+	mux.HandleFunc("GET /budgets/{id}", getBudgetByIDHandler(db))
 	mux.HandleFunc("GET /budgets/category/{category}", getBudgetByCategoryHandler(db))
 	mux.HandleFunc("POST /budgets", createBudgetHandler(db))
-	mux.HandleFunc("PUT /budgets/category/{category}", updateBudgetHandler(db))
-	mux.HandleFunc("DELETE /budgets/category/{category}", deleteBudgetHandler(db))
+	mux.HandleFunc("PUT /budgets/{id}", updateBudgetHandler(db))
+	mux.HandleFunc("DELETE /budgets/{id}", deleteBudgetHandler(db))
 
 	// Wrap the mux with CORS middleware
 	return middleware.CORS(mux)

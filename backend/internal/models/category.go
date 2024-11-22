@@ -72,6 +72,17 @@ func UpdateCategory(db *sql.DB, category Category) (Category, error) {
 }
 
 func DeleteCategory(db *sql.DB, id int64) error {
+	// Prevent deletion of the "Other" category
+	if id == 1 {
+		return fmt.Errorf("cannot delete the 'Other' category")
+	}
+
+	// Reassign all expenses to the "Other" category
+	_, err := db.Exec("UPDATE Expense SET category_id = 1 WHERE category_id = $1", id)
+	if err != nil {
+		return fmt.Errorf("failed to reassign expenses to 'Other': %w", err)
+	}
+
 	result, err := db.Exec("DELETE FROM Category WHERE id = $1", id)
 	if err != nil {
 		return fmt.Errorf("failed to execute delete query: %w", err)

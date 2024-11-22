@@ -139,6 +139,11 @@ func UpdateExpense(db *sql.DB, expense Expense) (Expense, error) {
 		args = append(args, expense.Date)
 		argCount++
 	}
+	if expense.CategoryID != 0 && expense.CategoryID != currentExpense.CategoryID {
+		updates = append(updates, fmt.Sprintf("category_id = $%d", argCount))
+		args = append(args, expense.CategoryID)
+		argCount++
+	}
 
 	if len(updates) == 0 {
 		return currentExpense, nil // No changes made

@@ -72,6 +72,21 @@ export function Navbar() {
                 </NavigationMenuLink>
               </Link>
             </NavigationMenuItem>
+            <NavigationMenuItem>
+              <Link to="/budgets">
+                <NavigationMenuLink
+                  className={cn(
+                    navigationMenuTriggerStyle(),
+                    "text-lg",
+                    location.pathname === "/budgets" &&
+                      "bg-primary text-primary-foreground hover:bg-primary/90"
+                  )}
+                >
+                  Budgets
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+
           </NavigationMenuList>
         </NavigationMenu>
       </div>

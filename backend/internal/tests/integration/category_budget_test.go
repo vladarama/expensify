@@ -42,9 +42,9 @@ func TestCategoryBudgetIntegration(t *testing.T) {
 
 		budget := models.Budget{
 			CategoryID: createdCategory.ID,
-			Amount:    300.0,
-			StartDate: startDate,
-			EndDate:   endDate,
+			Amount:     300.0,
+			StartDate:  startDate,
+			EndDate:    endDate,
 		}
 		_, err = models.CreateBudget(db, budget)
 		assert.NoError(t, err)
@@ -62,8 +62,8 @@ func TestCategoryBudgetIntegration(t *testing.T) {
 			WithArgs(createdCategory.ID).
 			WillReturnError(sql.ErrNoRows)
 
-		_, err = models.GetBudgetByCategory(db, "1")
+		_, err = models.GetBudgetsByCategoryID(db, 1)
 		assert.Error(t, err)
 		assert.Equal(t, sql.ErrNoRows, err)
 	})
-} 
+}

@@ -43,10 +43,10 @@ func TestBudgetExpenseIntegration(t *testing.T) {
 
 		budget := models.Budget{
 			CategoryID: createdCategory.ID,
-			Amount:    500.0,
-			Spent:     0.0,
-			StartDate: startDate,
-			EndDate:   endDate,
+			Amount:     500.0,
+			Spent:      0.0,
+			StartDate:  startDate,
+			EndDate:    endDate,
 		}
 		createdBudget, err := models.CreateBudget(db, budget)
 		assert.NoError(t, err)
@@ -73,8 +73,8 @@ func TestBudgetExpenseIntegration(t *testing.T) {
 
 		expense := models.Expense{
 			CategoryID:  createdCategory.ID,
-			Amount:     100.0,
-			Date:       time.Now(),
+			Amount:      100.0,
+			Date:        time.Now(),
 			Description: "Weekly groceries",
 		}
 		createdExpense, err := models.CreateExpense(db, expense)
@@ -87,8 +87,8 @@ func TestBudgetExpenseIntegration(t *testing.T) {
 			WillReturnRows(sqlmock.NewRows([]string{"id", "category_id", "amount", "spent", "start_date", "end_date"}).
 				AddRow(1, createdCategory.ID, 500.0, 100.0, startDate, endDate))
 
-		updatedBudget, err := models.GetBudgetByCategory(db, "1")
+		updatedBudget, err := models.GetBudgetsByCategoryID(db, createdCategory.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, float64(100.0), updatedBudget.Spent)
+		assert.Equal(t, float64(100.0), updatedBudget[0].Spent)
 	})
-} 
+}

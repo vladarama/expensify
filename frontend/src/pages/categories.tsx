@@ -190,6 +190,7 @@ export function Categories() {
     <div>
       <h1 className="text-2xl font-bold mb-4">Categories</h1>
 
+      
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="overflow-auto">
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -291,6 +292,7 @@ export function Categories() {
         </div>
       </div>
 
+    
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
