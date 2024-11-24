@@ -24,7 +24,7 @@ interface Props {
 export const CategoryWiseBudgetChart: React.FC<Props> = ({
   budgets,
   selectedCategoryId,
-  found_categories,
+//   found_categories,
 }) => {
   // Filter budgets by selected category
   const filteredBudgets = budgets.filter(
@@ -34,8 +34,8 @@ export const CategoryWiseBudgetChart: React.FC<Props> = ({
   // Format the labels as MM/YY
   const data = {
     labels: filteredBudgets.map((budget) => {
-      const categoryName =
-        found_categories.find((category) => category.id === budget.category_id)?.name || "Unknown";
+    //   const categoryName =
+    //     found_categories.find((category) => category.id === budget.category_id)?.name || "Unknown";
       const budgetDate = new Date(budget.start_date);
       const formattedDate = `${(budgetDate.getMonth() + 1)
         .toString()
