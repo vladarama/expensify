@@ -14,6 +14,8 @@ import { Trash2, Pencil } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { CategoryExpenseChart } from "@/components/charts/category-expense-chart";
 import { Expense } from "@/types/expense";
+import { cn } from "@/lib/utils";
+import { API_ENDPOINTS } from "@/config/api";
 
 export function CategoriesPage() {
   return (
@@ -49,7 +51,7 @@ export function Categories() {
     async function fetchCategories() {
       try {
         setIsLoading(true);
-        const response = await fetch("http://localhost:8080/categories");
+        const response = await fetch(API_ENDPOINTS.categories.getAll);
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
@@ -80,7 +82,7 @@ export function Categories() {
 
     async function fetchExpenses() {
       try {
-        const response = await fetch("http://localhost:8080/expenses");
+        const response = await fetch(API_ENDPOINTS.expenses.getAll);
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
@@ -108,7 +110,7 @@ export function Categories() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:8080/categories", {
+      const response = await fetch(API_ENDPOINTS.categories.create, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -129,7 +131,7 @@ export function Categories() {
 
   async function handleDelete(id: number) {
     try {
-      const response = await fetch(`http://localhost:8080/categories/${id}`, {
+      const response = await fetch(API_ENDPOINTS.categories.delete(id), {
         method: "DELETE",
       });
 
@@ -151,7 +153,7 @@ export function Categories() {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/categories/${editingCategory.id}`,
+        API_ENDPOINTS.categories.update(editingCategory.id),
         {
           method: "PUT",
           headers: {
@@ -187,15 +189,25 @@ export function Categories() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Categories</h1>
-
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="overflow-auto">
+    <div className="min-h-screen p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">
+            Categories Dashboard
+          </h1>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button className="mb-4">+ Add Category</Button>
+              <Button
+                className={cn(
+                  "w-full sm:w-auto",
+                  "bg-gradient-to-r from-orange-600 to-amber-500",
+                  "hover:from-orange-700 hover:to-amber-600",
+                  "text-white shadow-md hover:shadow-lg",
+                  "transition-all duration-200"
+                )}
+              >
+                + Add Category
+              </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -227,110 +239,198 @@ export function Categories() {
                     }
                   />
                 </div>
-                <Button type="submit" className="w-full">
+                <Button
+                  type="submit"
+                  className={cn(
+                    "w-full",
+                    "bg-gradient-to-r from-orange-600 to-amber-500",
+                    "hover:from-orange-700 hover:to-amber-600",
+                    "text-white shadow-md hover:shadow-lg",
+                    "transition-all duration-200"
+                  )}
+                >
                   Add Category
                 </Button>
               </form>
             </DialogContent>
           </Dialog>
+        </div>
 
-          <table className="min-w-full bg-white">
-            <thead>
-              <tr>
-                <th className="border px-4 py-2">Name</th>
-                <th className="border px-4 py-2">Description</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 overflow-hidden flex flex-col min-h-[500px] xl:h-[600px]">
+            <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">
+              Category List
+            </h2>
+            <div className="space-y-4">
               {categories?.length > 0 ? (
                 categories.map((category) => (
-                  <tr key={category.id} className="group hover:bg-gray-50">
-                    <td className="border px-4 py-2">{category.name}</td>
-                    <td className="border px-4 py-2 relative">
-                      {category.description}
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex gap-2">
+                  <div
+                    key={category.id}
+                    className="group bg-white p-4 rounded-lg shadow-sm hover:bg-orange-50/50 transition-colors lg:hidden"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {category.name}
+                        </div>
+                        <div className="text-gray-600 mt-1">
+                          {category.description}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleStartEdit(category)}
-                          className="h-8 w-8 hover:bg-gray-100/50"
+                          className="h-8 w-8 hover:bg-orange-100 rounded-full"
                         >
-                          <Pencil className="h-4 w-4 text-blue-500" />
+                          <Pencil className="h-4 w-4 text-orange-600" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDelete(category.id)}
-                          className="h-8 w-8 hover:bg-gray-100/50"
+                          className="h-8 w-8 hover:bg-red-100 rounded-full"
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))
               ) : (
-                <tr>
-                  <td
-                    colSpan={2}
-                    className="border px-4 py-2 text-center text-gray-500"
-                  >
-                    No categories found
-                  </td>
-                </tr>
+                <div className="text-center text-gray-500 py-4">
+                  No categories found
+                </div>
               )}
-            </tbody>
-          </table>
+
+              {/* Traditional table for larger screens */}
+              <div className="hidden lg:block">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-600 w-1/4">
+                        Name
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-600 w-2/4">
+                        Description
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categories?.length > 0 ? (
+                      categories.map((category) => (
+                        <tr
+                          key={category.id}
+                          className="group border-b border-gray-100 last:border-none hover:bg-orange-50/50 transition-colors"
+                        >
+                          <td className="py-3 px-4">
+                            <span className="font-medium text-gray-900">
+                              {category.name}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-gray-600">
+                              {category.description}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-1 sm:gap-2 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleStartEdit(category)}
+                                className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-orange-100 rounded-full"
+                              >
+                                <Pencil className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(category.id)}
+                                className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-red-100 rounded-full"
+                              >
+                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="py-3 px-4 text-center text-gray-500"
+                        >
+                          No categories found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 flex flex-col min-h-[500px] xl:h-[600px]">
+            <div className="flex-1">
+              <CategoryExpenseChart
+                expenses={expenses}
+                categories={categories}
+                getCategoryName={getCategoryName}
+              />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <CategoryExpenseChart
-            expenses={expenses}
-            categories={categories}
-            getCategoryName={getCategoryName}
-          />
-        </div>
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Category</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  required
+                  value={editingCategory?.name || ""}
+                  onChange={(e) =>
+                    setEditingCategory((prev) =>
+                      prev ? { ...prev, name: e.target.value } : null
+                    )
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Input
+                  id="edit-description"
+                  required
+                  value={editingCategory?.description || ""}
+                  onChange={(e) =>
+                    setEditingCategory((prev) =>
+                      prev ? { ...prev, description: e.target.value } : null
+                    )
+                  }
+                />
+              </div>
+              <Button
+                type="submit"
+                className={cn(
+                  "w-full",
+                  "bg-gradient-to-r from-orange-600 to-amber-500",
+                  "hover:from-orange-700 hover:to-amber-600",
+                  "text-white shadow-md hover:shadow-lg",
+                  "transition-all duration-200"
+                )}
+              >
+                Save Changes
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
-
-    
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
-              <Input
-                id="edit-name"
-                required
-                value={editingCategory?.name || ""}
-                onChange={(e) =>
-                  setEditingCategory((prev) =>
-                    prev ? { ...prev, name: e.target.value } : null
-                  )
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Input
-                id="edit-description"
-                required
-                value={editingCategory?.description || ""}
-                onChange={(e) =>
-                  setEditingCategory((prev) =>
-                    prev ? { ...prev, description: e.target.value } : null
-                  )
-                }
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              Save Changes
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

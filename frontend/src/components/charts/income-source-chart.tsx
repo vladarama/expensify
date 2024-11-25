@@ -47,7 +47,7 @@ export function IncomeSourceChart({ incomes }: IncomeSourceChartProps) {
 
   return (
     <div className="w-full h-full min-h-[400px]">
-      <h2 className="text-xl font-semibold mb-4">Income by Source</h2>
+      <h2 className="text-xl font-semibold mb-4"></h2>
       <ResponsiveContainer width="100%" height="90%">
         <PieChart>
           <Pie

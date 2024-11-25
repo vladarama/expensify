@@ -56,9 +56,6 @@ export function MonthlyExpenseChart({ expenses }: MonthlyExpenseChartProps) {
 
   return (
     <div className="w-full h-full min-h-[500px]">
-      <h2 className="text-xl font-semibold mb-4">
-        Monthly Expenses (Last 12 Months)
-      </h2>
       <ResponsiveContainer width="100%" height="90%">
         <BarChart data={monthlyData}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -67,7 +64,17 @@ export function MonthlyExpenseChart({ expenses }: MonthlyExpenseChartProps) {
           <Tooltip
             formatter={(value: number) => [`$${value.toFixed(2)}`, "Amount"]}
           />
-          <Bar dataKey="amount" fill="#8884d8" />
+          <Bar
+            dataKey="amount"
+            fill="url(#redGradient)"
+            radius={[4, 4, 0, 0]}
+          />
+          <defs>
+            <linearGradient id="redGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#dc2626" stopOpacity={1} />
+              <stop offset="100%" stopColor="#f43f5e" stopOpacity={1} />
+            </linearGradient>
+          </defs>
         </BarChart>
       </ResponsiveContainer>
     </div>

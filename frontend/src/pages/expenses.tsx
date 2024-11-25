@@ -15,6 +15,8 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { Category } from "../types/category";
 import { MonthlyExpenseChart } from "@/components/charts/monthly-expense-chart";
 import { SortButton } from "@/components/ui/sort-button";
+import { cn } from "@/lib/utils";
+import { API_ENDPOINTS } from "@/config/api";
 
 type SortField = "category" | "amount" | "date";
 type SortDirection = "asc" | "desc" | null;
@@ -56,7 +58,7 @@ export function Expenses() {
     async function fetchExpenses() {
       try {
         setIsLoading(true);
-        const response = await fetch("http://localhost:8080/expenses");
+        const response = await fetch(API_ENDPOINTS.expenses.getAll);
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
@@ -87,7 +89,7 @@ export function Expenses() {
 
     async function fetchCategories() {
       try {
-        const response = await fetch("http://localhost:8080/categories");
+        const response = await fetch(API_ENDPOINTS.categories.getAll);
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
@@ -174,7 +176,7 @@ export function Expenses() {
         return;
       }
 
-      const response = await fetch("http://localhost:8080/expenses", {
+      const response = await fetch(API_ENDPOINTS.expenses.create, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -208,7 +210,7 @@ export function Expenses() {
 
   async function handleDelete(id: number) {
     try {
-      const response = await fetch(`http://localhost:8080/expenses/${id}`, {
+      const response = await fetch(API_ENDPOINTS.expenses.delete(id), {
         method: "DELETE",
       });
 
@@ -228,7 +230,7 @@ export function Expenses() {
       const formattedDate = new Date(editingExpense.date).toISOString();
 
       const response = await fetch(
-        `http://localhost:8080/expenses/${editingExpense.id}`,
+        API_ENDPOINTS.expenses.update(editingExpense.id),
         {
           method: "PUT",
           headers: {
@@ -266,262 +268,354 @@ export function Expenses() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Expenses</h1>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          <Button className="mb-4">+ Add Expense</Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Expense</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                type="text"
-                required
-                value={newExpense.description}
-                onChange={(e) =>
-                  setNewExpense({ ...newExpense, description: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                required
-                value={newExpense.amount}
-                onChange={(e) =>
-                  setNewExpense({ ...newExpense, amount: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                required
-                value={newExpense.date}
-                onChange={(e) =>
-                  setNewExpense({ ...newExpense, date: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="category_id">Category</Label>
-              <select
-                id="category_id"
-                className="w-full rounded-md border border-input bg-background px-3 py-2"
-                value={newExpense.category_id}
-                onChange={(e) =>
-                  setNewExpense({ ...newExpense, category_id: e.target.value })
-                }
-                required
+    <div className="min-h-screen p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-rose-500 bg-clip-text text-transparent">
+            Expenses Dashboard
+          </h1>
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button
+                className={cn(
+                  "w-full sm:w-auto",
+                  "bg-gradient-to-r from-red-600 to-rose-500",
+                  "hover:from-red-700 hover:to-rose-600",
+                  "text-white shadow-md hover:shadow-lg",
+                  "transition-all duration-200"
+                )}
               >
-                <option value="">Select a category</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.name}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button type="submit" className="w-full">
-              Add Expense
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+                + Add Expense
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Expense</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Input
+                    id="description"
+                    type="text"
+                    required
+                    value={newExpense.description}
+                    onChange={(e) =>
+                      setNewExpense({
+                        ...newExpense,
+                        description: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    required
+                    value={newExpense.amount}
+                    onChange={(e) =>
+                      setNewExpense({ ...newExpense, amount: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    required
+                    value={newExpense.date}
+                    onChange={(e) =>
+                      setNewExpense({ ...newExpense, date: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category_id">Category</Label>
+                  <select
+                    id="category_id"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                    value={newExpense.category_id}
+                    onChange={(e) =>
+                      setNewExpense({
+                        ...newExpense,
+                        category_id: e.target.value,
+                      })
+                    }
+                    required
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.name}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Button
+                  type="submit"
+                  className={cn(
+                    "w-full",
+                    "bg-gradient-to-r from-red-600 to-rose-500",
+                    "hover:from-red-700 hover:to-rose-600",
+                    "text-white shadow-md hover:shadow-lg",
+                    "transition-all duration-200"
+                  )}
+                >
+                  Add Expense
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Expense</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
-              <Input
-                id="edit-name"
-                type="text"
-                required
-                value={editingExpense?.description || ""}
-                onChange={(e) =>
-                  setEditingExpense((prev) =>
-                    prev ? { ...prev, description: e.target.value } : null
-                  )
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-amount">Amount</Label>
-              <Input
-                id="edit-amount"
-                type="number"
-                step="0.01"
-                required
-                value={editingExpense?.amount || ""}
-                onChange={(e) =>
-                  setEditingExpense((prev) =>
-                    prev
-                      ? { ...prev, amount: parseFloat(e.target.value) }
-                      : null
-                  )
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-date">Date</Label>
-              <Input
-                id="edit-date"
-                type="date"
-                required
-                value={editingExpense?.date || ""}
-                onChange={(e) =>
-                  setEditingExpense((prev) =>
-                    prev ? { ...prev, date: e.target.value } : null
-                  )
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-category">Category</Label>
-              <select
-                id="edit-category"
-                className="w-full rounded-md border border-input bg-background px-3 py-2"
-                value={getCategoryName(editingExpense?.category_id || 0)}
-                onChange={(e) => {
-                  const category = categories.find(
-                    (cat) => cat.name === e.target.value
-                  );
-                  if (category && editingExpense) {
-                    setEditingExpense({
-                      ...editingExpense,
-                      category_id: category.id,
-                    });
-                  }
-                }}
-                required
-              >
-                <option value="">Select a category</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.name}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button type="submit" className="w-full">
-              Save Changes
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-8"> */}
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Table Section */}
-        <div className="overflow-auto">
-          <table className="min-w-full bg-white">
-            <thead>
-              <tr>
-                <th className="border px-4 py-2">Description</th>
-                <th className="border px-4 py-2">
-                  <SortButton
-                    label="Category"
-                    active={sortState.field === "category"}
-                    direction={
-                      sortState.field === "category"
-                        ? sortState.direction
-                        : null
-                    }
-                    onClick={() => handleSort("category")}
-                  />
-                </th>
-                <th className="border px-4 py-2">
-                  <SortButton
-                    label="Amount"
-                    active={sortState.field === "amount"}
-                    direction={
-                      sortState.field === "amount" ? sortState.direction : null
-                    }
-                    onClick={() => handleSort("amount")}
-                  />
-                </th>
-                <th className="border px-4 py-2">
-                  <SortButton
-                    label="Date"
-                    active={sortState.field === "date"}
-                    direction={
-                      sortState.field === "date" ? sortState.direction : null
-                    }
-                    onClick={() => handleSort("date")}
-                  />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedExpenses?.length > 0 ? (
-                sortedExpenses.map((expense) => (
-                  <tr key={expense.id} className="group hover:bg-gray-50">
-                    <td className="border px-4 py-2">{expense.description}</td>
-                    <td className="border px-4 py-2">
-                      {getCategoryName(expense.category_id)}
-                    </td>
-                    <td className="border px-4 py-2">${expense.amount}</td>
-                    <td className="border px-4 py-2 relative min-w-[200px]">
-                      <div className="flex justify-between items-center gap-2">
-                        <span>
-                          {new Date(expense.date).toLocaleDateString()}
-                        </span>
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleStartEdit(expense)}
-                            className="h-8 w-8 hover:bg-gray-100/50"
-                          >
-                            <Pencil className="h-4 w-4 text-blue-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(expense.id)}
-                            className="h-8 w-8 hover:bg-gray-100/50"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 overflow-hidden flex flex-col min-h-[500px] xl:h-[600px]">
+            <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">
+              Expense History
+            </h2>
+            <div className="overflow-x-auto">
+              <div className="space-y-4">
+                {sortedExpenses.map((expense) => (
+                  <div
+                    key={expense.id}
+                    className="group bg-white p-4 rounded-lg shadow-sm hover:bg-red-50/50 transition-colors lg:hidden"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {expense.description}
+                        </div>
+                        <div className="text-gray-600 text-sm mt-1">
+                          {getCategoryName(expense.category_id)}
+                        </div>
+                        <div className="text-red-600 font-semibold mt-1">
+                          ${expense.amount.toLocaleString()}
                         </div>
                       </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="border px-4 py-2 text-center text-gray-500"
-                  >
-                    No expenses found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleStartEdit(expense)}
+                          className="h-8 w-8 hover:bg-red-100 rounded-full"
+                        >
+                          <Pencil className="h-4 w-4 text-red-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(expense.id)}
+                          className="h-8 w-8 hover:bg-red-100 rounded-full"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="text-gray-600 text-sm">
+                      {new Date(expense.date).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="hidden lg:block">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-600 w-1/5">
+                          Description
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-600 w-1/5">
+                          Category
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-600 w-1/5">
+                          <SortButton
+                            label="Amount"
+                            active={sortState.field === "amount"}
+                            direction={
+                              sortState.field === "amount"
+                                ? sortState.direction
+                                : null
+                            }
+                            onClick={() => handleSort("amount")}
+                            className="hover:text-red-600 hover:bg-transparent"
+                          />
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-600 w-2/5 min-w-[200px]">
+                          <div className="flex justify-between items-center">
+                            <SortButton
+                              label="Date"
+                              active={sortState.field === "date"}
+                              direction={
+                                sortState.field === "date"
+                                  ? sortState.direction
+                                  : null
+                              }
+                              onClick={() => handleSort("date")}
+                              className="hover:text-red-600 hover:bg-transparent"
+                            />
+                          </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedExpenses.map((expense) => (
+                        <tr
+                          key={expense.id}
+                          className="group border-b border-gray-100 last:border-none hover:bg-red-50/50 transition-colors"
+                        >
+                          <td className="py-3 px-4">
+                            <span className="font-medium text-gray-900">
+                              {expense.description}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-gray-600">
+                              {getCategoryName(expense.category_id)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-red-600 font-semibold">
+                              ${expense.amount.toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex justify-between items-center gap-2">
+                              <span className="text-gray-600 text-sm sm:text-base">
+                                {new Date(expense.date).toLocaleDateString()}
+                              </span>
+                              <div className="flex gap-1 sm:gap-2 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleStartEdit(expense)}
+                                  className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-red-100 rounded-full"
+                                >
+                                  <Pencil className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(expense.id)}
+                                  className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-red-100 rounded-full"
+                                >
+                                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 flex flex-col min-h-[500px] xl:h-[600px]">
+            <div className="flex-1">
+              <MonthlyExpenseChart expenses={expenses} />
+            </div>
+          </div>
         </div>
 
-        {/* Charts Section */}
-        <div>
-          <MonthlyExpenseChart expenses={expenses} />
-        </div>
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Expense</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  type="text"
+                  required
+                  value={editingExpense?.description || ""}
+                  onChange={(e) =>
+                    setEditingExpense((prev) =>
+                      prev ? { ...prev, description: e.target.value } : null
+                    )
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount">Amount</Label>
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  step="0.01"
+                  required
+                  value={editingExpense?.amount || ""}
+                  onChange={(e) =>
+                    setEditingExpense((prev) =>
+                      prev
+                        ? { ...prev, amount: parseFloat(e.target.value) }
+                        : null
+                    )
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-date">Date</Label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  required
+                  value={editingExpense?.date || ""}
+                  onChange={(e) =>
+                    setEditingExpense((prev) =>
+                      prev ? { ...prev, date: e.target.value } : null
+                    )
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-category">Category</Label>
+                <select
+                  id="edit-category"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  value={getCategoryName(editingExpense?.category_id || 0)}
+                  onChange={(e) => {
+                    const category = categories.find(
+                      (cat) => cat.name === e.target.value
+                    );
+                    if (category && editingExpense) {
+                      setEditingExpense({
+                        ...editingExpense,
+                        category_id: category.id,
+                      });
+                    }
+                  }}
+                  required
+                >
+                  <option value="">Select a category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.name}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                type="submit"
+                className={cn(
+                  "w-full",
+                  "bg-gradient-to-r from-red-600 to-rose-500",
+                  "hover:from-red-700 hover:to-rose-600",
+                  "text-white shadow-md hover:shadow-lg",
+                  "transition-all duration-200"
+                )}
+              >
+                Save Changes
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
