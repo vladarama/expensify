@@ -63,6 +63,17 @@ func TestCreateBudget(t *testing.T) {
 	}
 	defer db.Close()
 
+	// Mock DoesBudgetOverlap query
+	mock.ExpectQuery(`SELECT EXISTS \( SELECT 1 FROM Budget WHERE category_id = \$1 AND id <> \$4 AND \( \(start_date <= \$3 AND end_date >= \$2\) \) \)`).
+		WithArgs(int64(1), sqlmock.AnyArg(), sqlmock.AnyArg(), int64(0)).
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
+
+	// Mock CalculateTotalSpent query
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM Expense WHERE category_id = \\$1 AND date >= \\$2 AND date <= \\$3").
+		WithArgs(int64(1), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"total_spent"}).AddRow(200.0))
+
+	// Mock Insert query
 	mock.ExpectQuery("INSERT INTO Budget \\(category_id, amount, spent, start_date, end_date\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5\\) RETURNING id").
 		WithArgs(int64(1), 500.0, 200.0, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
@@ -110,23 +121,35 @@ func TestUpdateBudget(t *testing.T) {
 	}
 	defer db.Close()
 
+	// Mock DoesBudgetOverlap query
+	mock.ExpectQuery(`SELECT EXISTS \( SELECT 1 FROM Budget WHERE category_id = \$1 AND id <> \$4 AND \( \(start_date <= \$3 AND end_date >= \$2\) \) \)`).
+		WithArgs(int64(1), sqlmock.AnyArg(), sqlmock.AnyArg(), int64(1)). // Ensure `id <> $4` matches the budget being updated
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
+
+	// Mock CalculateTotalSpent query
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM Expense WHERE category_id = \\$1 AND date >= \\$2 AND date <= \\$3").
+		WithArgs(int64(1), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"total_spent"}).AddRow(250.0))
+
+	// Mock Update query
 	mock.ExpectExec("UPDATE Budget SET amount = \\$1, spent = \\$2, start_date = \\$3, end_date = \\$4 WHERE category_id = \\$5").
-		WithArgs(600.0, 250.0, sqlmock.AnyArg(), sqlmock.AnyArg(), int64(1)). // Change to int64
+		WithArgs(600.0, 250.0, sqlmock.AnyArg(), sqlmock.AnyArg(), int64(1)).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	budget := models.Budget{
-		CategoryID: int64(1), // Change to int64
-		Amount:     600.0,
-		Spent:      250.0,
-		StartDate:  time.Now(),
-		EndDate:    time.Now().Add(30 * 24 * time.Hour),
+		ID:         1,                                   // Ensure ID matches the updated record
+		CategoryID: int64(1),                            // Category ID
+		Amount:     600.0,                               // Updated Amount
+		Spent:      250.0,                               // Updated Spent
+		StartDate:  time.Now(),                          // Updated StartDate
+		EndDate:    time.Now().Add(30 * 24 * time.Hour), // Updated EndDate
 	}
 	updatedBudget, err := models.UpdateBudget(db, budget)
 
 	assert.NoError(t, err)
-	assert.Equal(t, int64(1), updatedBudget.CategoryID) // Updated to int64
-	assert.Equal(t, float64(600), updatedBudget.Amount)
-	assert.Equal(t, float64(250), updatedBudget.Spent)
+	assert.Equal(t, int64(1), updatedBudget.CategoryID) // Ensure CategoryID is updated
+	assert.Equal(t, float64(600), updatedBudget.Amount) // Ensure Amount is updated
+	assert.Equal(t, float64(250), updatedBudget.Spent)  // Ensure Spent is updated
 }
 
 func TestUpdateBudgetWithEmptyCategory(t *testing.T) {

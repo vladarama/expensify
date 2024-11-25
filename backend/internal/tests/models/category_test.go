@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"database/sql"
 	"errors"
 	"testing"
 
@@ -128,7 +129,6 @@ func TestUpdateCategoryWithoutID(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, errors.New("id must be provided"), err)
 }
-
 func TestDeleteCategory(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -136,11 +136,33 @@ func TestDeleteCategory(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectExec("DELETE FROM Category WHERE id = \\$1").
-		WithArgs(1).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-
+	// Test case: Prevent deletion of the "Other" category
 	err = models.DeleteCategory(db, 1)
+	assert.Error(t, err)
+	assert.Equal(t, "cannot delete the 'Other' category", err.Error())
 
+	// Test case: Reassign expenses to "Other" and delete a category
+	mock.ExpectExec(`UPDATE Expense SET category_id = 1 WHERE category_id = \$1`).
+		WithArgs(int64(2)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectExec(`DELETE FROM Category WHERE id = \$1`).
+		WithArgs(int64(2)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err = models.DeleteCategory(db, 2)
 	assert.NoError(t, err)
+
+	// Test case: Category not found
+	mock.ExpectExec(`UPDATE Expense SET category_id = 1 WHERE category_id = \$1`).
+		WithArgs(int64(3)).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+	mock.ExpectExec(`DELETE FROM Category WHERE id = \$1`).
+		WithArgs(int64(3)).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+	err = models.DeleteCategory(db, 3)
+	assert.Error(t, err)
+	assert.Equal(t, sql.ErrNoRows, err)
 }

@@ -246,14 +246,15 @@ func DeleteBudget(db *sql.DB, id int64) error {
 }
 
 func DoesBudgetOverlap(db *sql.DB, categoryID int64, startDate, endDate time.Time, excludeBudgetID int64) (bool, error) {
+	// Check if the budget overlaps with any existing budget other than the one being updated
 	query := `
 		SELECT EXISTS (
 			SELECT 1
 			FROM Budget
 			WHERE category_id = $1
-			AND id <> $4 -- Exclude the budget being updated (if applicable)
+			AND id <> $4
 			AND (
-				(start_date <= $3 AND end_date >= $2) -- Overlaps with the given date range
+				(start_date <= $3 AND end_date >= $2)
 			)
 		)
 	`

@@ -16,60 +16,62 @@ func TestBudgetExpenseIntegration(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Test creating a category, budget, and expense workflow
 	t.Run("Complete Budget-Expense Workflow", func(t *testing.T) {
-		// 1. Create Category
-		categoryRows := sqlmock.NewRows([]string{"id"}).AddRow(1)
-		mock.ExpectQuery("INSERT INTO Category").
+		// Step 1: Create Category
+		mock.ExpectQuery(`INSERT INTO Category \(name, description\) VALUES \(\$1, \$2\) RETURNING id`).
 			WithArgs("Groceries", "Food and household items").
-			WillReturnRows(categoryRows)
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-		category := models.Category{
-			Name:        "Groceries",
-			Description: "Food and household items",
-		}
+		category := models.Category{Name: "Groceries", Description: "Food and household items"}
 		createdCategory, err := models.CreateCategory(db, category)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), createdCategory.ID)
 
-		// 2. Create Budget for Category
-		budgetRows := sqlmock.NewRows([]string{"id"}).AddRow(1)
-		startDate := time.Now()
-		endDate := startDate.AddDate(0, 1, 0)
+		// Step 2: Create Budget
+		startDate := time.Now().AddDate(0, -1, 0)
+		endDate := time.Now().AddDate(0, 1, 0)
 
-		mock.ExpectQuery("INSERT INTO Budget").
+		// Mock budget overlap check
+		mock.ExpectQuery(`SELECT EXISTS \( SELECT 1 FROM Budget WHERE category_id = \$1 AND id <> \$4 AND \( \(start_date <= \$3 AND end_date >= \$2\) \) \)`).
+			WithArgs(createdCategory.ID, startDate, endDate, 0).
+			WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
+
+		// Mock total spent calculation (initially 0)
+		mock.ExpectQuery(`SELECT COALESCE\(SUM\(amount\), 0\) FROM Expense WHERE category_id = \$1 AND date >= \$2 AND date <= \$3`).
+			WithArgs(createdCategory.ID, startDate, endDate).
+			WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(0.0))
+
+		// Mock budget creation
+		mock.ExpectQuery(`INSERT INTO Budget \(category_id, amount, spent, start_date, end_date\) VALUES \(\$1, \$2, \$3, \$4, \$5\) RETURNING id`).
 			WithArgs(createdCategory.ID, 500.0, 0.0, startDate, endDate).
-			WillReturnRows(budgetRows)
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 		budget := models.Budget{
 			CategoryID: createdCategory.ID,
 			Amount:     500.0,
-			Spent:      0.0,
 			StartDate:  startDate,
 			EndDate:    endDate,
 		}
 		createdBudget, err := models.CreateBudget(db, budget)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), createdBudget.ID)
+		assert.Equal(t, float64(0.0), createdBudget.Spent)
 
-		// First expect the INSERT query
-		now := time.Now()
-		expenseRows := sqlmock.NewRows([]string{"id", "category_id", "amount", "date", "description"}).
-			AddRow(1, createdCategory.ID, 100.0, now, "Weekly groceries")
-
-		mock.ExpectQuery("INSERT INTO Expense \\(category_id, amount, date, description\\) VALUES \\(\\$1, \\$2, \\$3, \\$4\\) RETURNING id, category_id, amount, date, description").
+		// Step 3: Create Expense
+		mock.ExpectQuery(`INSERT INTO Expense \(category_id, amount, date, description\) VALUES \(\$1, \$2, \$3, \$4\) RETURNING id, category_id, amount, date, description`).
 			WithArgs(createdCategory.ID, 100.0, sqlmock.AnyArg(), "Weekly groceries").
-			WillReturnRows(expenseRows)
+			WillReturnRows(sqlmock.NewRows([]string{"id", "category_id", "amount", "date", "description"}).
+				AddRow(1, createdCategory.ID, 100.0, time.Now(), "Weekly groceries"))
 
-		// Then expect the budget check
-		mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM Budget WHERE category_id = \\$1").
+		// Mock budget existence check
+		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM Budget WHERE category_id = \$1`).
 			WithArgs(createdCategory.ID).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
-		// Finally expect the budget update
-		mock.ExpectExec("UPDATE Budget SET spent = spent \\+ \\$1 WHERE category_id = \\$2").
+		// Mock budget spent update
+		mock.ExpectExec(`UPDATE Budget SET spent = spent \+ \$1 WHERE category_id = \$2`).
 			WithArgs(100.0, createdCategory.ID).
-			WillReturnResult(sqlmock.NewResult(1, 1))
+			WillReturnResult(sqlmock.NewResult(0, 1))
 
 		expense := models.Expense{
 			CategoryID:  createdCategory.ID,
@@ -81,14 +83,19 @@ func TestBudgetExpenseIntegration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), createdExpense.ID)
 
-		// 4. Verify Budget Update
-		mock.ExpectQuery("SELECT id, category_id, amount, spent, start_date, end_date FROM Budget WHERE category_id = \\$1").
+		// Step 4: Verify Budget Update
+		mock.ExpectQuery(`SELECT id, category_id, amount, spent, start_date, end_date FROM Budget WHERE category_id = \$1`).
 			WithArgs(createdCategory.ID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "category_id", "amount", "spent", "start_date", "end_date"}).
 				AddRow(1, createdCategory.ID, 500.0, 100.0, startDate, endDate))
 
-		updatedBudget, err := models.GetBudgetsByCategoryID(db, createdCategory.ID)
+		updatedBudgets, err := models.GetBudgetsByCategoryID(db, createdCategory.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, float64(100.0), updatedBudget[0].Spent)
+		assert.Len(t, updatedBudgets, 1)
+		assert.Equal(t, float64(100.0), updatedBudgets[0].Spent)
 	})
+
+	// Verify all expectations were met
+	err = mock.ExpectationsWereMet()
+	assert.NoError(t, err)
 }
