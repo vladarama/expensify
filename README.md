@@ -9,7 +9,6 @@ A modern expense tracking application built with React, Go, and PostgreSQL that 
 - **Real-time Insights**: Visualize spending patterns and budgets through interactive charts
 - **Budget Management**: Set and track budgets by category
 - **Income Tracking**: Monitor multiple income sources
-- **Category Management**: Organize expenses with customizable categories
 
 ## Tech Stack
 
